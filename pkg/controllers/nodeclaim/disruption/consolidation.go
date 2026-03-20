@@ -18,6 +18,7 @@ package disruption
 
 import (
 	"context"
+	"time"
 
 	"github.com/samber/lo"
 	"k8s.io/utils/clock"
@@ -74,5 +75,5 @@ func (c *Consolidation) Reconcile(ctx context.Context, nodePool *v1.NodePool, no
 	if !hasConsolidatableCondition {
 		log.FromContext(ctx).V(1).Info("marking consolidatable")
 	}
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: min(lo.FromPtr(nodePool.Spec.Disruption.ConsolidateAfter.Duration), 2*time.Minute)}, nil
 }

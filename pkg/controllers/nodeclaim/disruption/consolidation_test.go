@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -95,6 +96,21 @@ var _ = Describe("Underutilized", func() {
 		ExpectObjectReconciled(ctx, env.Client, nodeClaimDisruptionController, nodeClaim)
 		nodeClaim = ExpectExists(ctx, env.Client, nodeClaim)
 		Expect(nodeClaim.StatusConditions().Get(v1.ConditionTypeConsolidatable).IsTrue()).To(BeTrue())
+	})
+	It("should requeue with consolidateAfter after marking NodeClaim as consolidatable", func() {
+		result := ExpectObjectReconciled(ctx, env.Client, nodeClaimDisruptionController, nodeClaim)
+		nodeClaim = ExpectExists(ctx, env.Client, nodeClaim)
+		Expect(nodeClaim.StatusConditions().Get(v1.ConditionTypeConsolidatable).IsTrue()).To(BeTrue())
+		Expect(result.RequeueAfter).To(Equal(lo.FromPtr(nodePool.Spec.Disruption.ConsolidateAfter.Duration)))
+	})
+	It("should cap requeue at 2 minutes when consolidateAfter is larger", func() {
+		nodePool.Spec.Disruption.ConsolidateAfter = v1.MustParseNillableDuration("10m")
+		nodeClaim.Status.LastPodEventTime.Time = fakeClock.Now().Add(-15 * time.Minute)
+		ExpectApplied(ctx, env.Client, nodePool, nodeClaim)
+		result := ExpectObjectReconciled(ctx, env.Client, nodeClaimDisruptionController, nodeClaim)
+		nodeClaim = ExpectExists(ctx, env.Client, nodeClaim)
+		Expect(nodeClaim.StatusConditions().Get(v1.ConditionTypeConsolidatable).IsTrue()).To(BeTrue())
+		Expect(result.RequeueAfter).To(Equal(2 * time.Minute))
 	})
 	It("should mark NodeClaims as consolidatable based on the nodeclaim initialized time", func() {
 		// set the lastPodEvent as zero, so it's like no pods have scheduled
