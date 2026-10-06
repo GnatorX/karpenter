@@ -532,9 +532,11 @@ func (i InstanceTypeOverhead) Total() corev1.ResourceList {
 // Requirements are required to contain the keys v1.CapacityTypeLabelKey and corev1.LabelTopologyZone.
 // +k8s:deepcopy-gen=true
 type Offering struct {
-	Requirements        scheduling.Requirements
-	Price               float64
-	Available           bool
+	Requirements scheduling.Requirements
+	Price        float64
+	Available    bool
+	// AvailabilityStale indicates that Available is not based on a recent launch attempt.
+	AvailabilityStale   bool
 	ReservationCapacity int
 
 	// CapacityOverride specifies resource overrides for this offering's capacity.

@@ -177,8 +177,9 @@ var _ = Describe("Store Apply Correctness", func() {
 							scheduling.NewRequirement(corev1.LabelTopologyZone, corev1.NodeSelectorOpIn, "us-west-2a"),
 							scheduling.NewRequirement(v1.CapacityTypeLabelKey, corev1.NodeSelectorOpIn, "on-demand"),
 						),
-						Price:     originalPrice,
-						Available: true,
+						Price:             originalPrice,
+						Available:         true,
+						AvailabilityStale: true,
 					},
 					cloudprovider.Offering{
 						Requirements: scheduling.NewRequirements(
@@ -210,6 +211,7 @@ var _ = Describe("Store Apply Correctness", func() {
 			// Verify first offering was modified
 			Expect(result.Offerings[0].Price).To(BeNumerically("==", 0.106), "expected first offering price to be 0.106") // 0.096 + 0.01
 			Expect(result.Offerings[0].IsPriceOverlaid()).To(BeTrue(), "expected first offering to have priceOverlayApplied flag set")
+			Expect(result.Offerings[0].AvailabilityStale).To(BeTrue(), "expected availability staleness to be preserved")
 
 			// Verify second offering was NOT modified (should be shared pointer)
 			Expect(result.Offerings[1].Price).To(BeNumerically("==", originalPrice), "expected second offering price to remain unchanged")
